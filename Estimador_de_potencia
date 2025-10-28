@@ -1,0 +1,39 @@
+import numpy as np
+from gnuradio import gr
+
+class PowerEstimator(gr.sync_block):
+    """
+    PowerEstimator: recibe vectores y calcula potencia promedio por ventana.
+    Parámetros:
+        vector_length=1024
+        assume_analytic=False  -> si True, devuelve (mean(|x|^2)/2) (útil si la entrada es
+                                  la señal analítica compleja que representa una portadora real)
+    Señales:
+        in_sig = [(np.complex64, vector_length)]  (o cambiar a np.float32 si usas señales reales)
+        out_sig = [np.float32]
+    """
+
+    def __init__(self, vector_length=1024, assume_analytic=False):
+        gr.sync_block.__init__(
+            self,
+            name="PowerEstimator",
+            in_sig=[(np.complex64, int(vector_length))],
+            out_sig=[np.float32]
+        )
+        self.vector_length = int(vector_length)
+        # Si la entrada es real (float), aquí sería mejor usar in_sig = [(np.float32, vector_length)]
+        self.assume_analytic = bool(assume_analytic)
+
+    def work(self, input_items, output_items):
+        in0 = input_items[0]         # shape (n_items, vector_length)
+        out0 = output_items[0]       # shape (n_items,)
+
+        # potencia por ventana: mean(|x|^2)
+        powers = np.mean(np.abs(in0)**2, axis=1)
+
+        if self.assume_analytic:
+            # Si la señal es analítica que representa una portadora real, dividir por 2
+            powers = powers * 0.5
+
+        out0[:] = powers.astype(np.float32)
+        return len(out0)
