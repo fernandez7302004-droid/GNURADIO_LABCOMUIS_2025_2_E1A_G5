@@ -1,0 +1,43 @@
+import numpy as np
+from gnuradio import gr
+
+class AmplitudeStats(gr.sync_block):
+    """
+    AmplitudeStats: recibe una entrada por item que es un VECTOR de muestras complejas
+    (dtype np.complex64) y produce DOS salidas por item (float32):
+      out[0] = media de la magnitud
+      out[1] = desviación estándar de la magnitud
+    Constructor:
+        AmplitudeStats(vector_length=1024)
+    Señales:
+        in_sig = [(np.complex64, vector_length)]
+        out_sig = [np.float32, np.float32]
+    """
+
+    def __init__(self, vector_length=1024):
+        gr.sync_block.__init__(
+            self,
+            name="AmplitudeStats",
+            in_sig=[(np.complex64, int(vector_length))],
+            out_sig=[np.float32, np.float32]
+        )
+        self.vector_length = int(vector_length)
+
+    def work(self, input_items, output_items):
+        """
+        input_items[0] shape: (n_items, vector_length)
+        output_items[0] and output_items[1] shape: (n_items,)
+        Calcula media y std de la magnitud para cada ventana.
+        """
+        in0 = input_items[0]
+        out_mean = output_items[0]
+        out_std = output_items[1]
+
+        mags = np.abs(in0)                           # shape (n_items, vector_length)
+        means = np.mean(mags, axis=1)               # shape (n_items,)
+        stds = np.std(mags, axis=1)                 # shape (n_items,) ddof=0
+
+        out_mean[:] = means.astype(np.float32)
+        out_std[:] = stds.astype(np.float32)
+
+        return len(out_mean)
